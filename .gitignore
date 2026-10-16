@@ -1,0 +1,16 @@
+/vendor/
+/node_modules/
+.env
+!.env.example
+/coverage/
+/build/
+*.log
+.phpunit.cache/
+.phpstan.cache/
+.idea/
+.vscode/
+.DS_Store
+/var/
+.dockerignore
+.editorconfig
+.github/
