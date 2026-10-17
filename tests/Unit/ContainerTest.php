@@ -19,6 +19,7 @@ final class ContainerTest extends TestCase
     private const REQUIRED_ENV = [
         'APP_NAME' => 'headless-ecom',
         'APP_ENV' => 'local',
+        'APP_DEBUG' => 'true',
         'APP_URL' => 'http://localhost:8081',
         'DATABASE_URL' => 'pgsql://ecom:ecom@db:5432/ecom',
         'REDIS_URL' => 'redis://cache:6379',
