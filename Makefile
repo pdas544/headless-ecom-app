@@ -1,4 +1,4 @@
-.PHONY: install start start-infra build logs test analyse cs shell db-shell redis-shell
+.PHONY: install start start-infra build logs test analyse cs shell db-shell redis-shell reload
 
 install:
 	composer install
@@ -14,6 +14,9 @@ build:
 start:
 	docker compose up -d
 	docker compose ps
+
+reload:
+	docker compose exec -T web nginx -s reload
 
 stop:
 	docker compose down

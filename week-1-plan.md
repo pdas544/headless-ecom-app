@@ -16,6 +16,19 @@ End the week with a runnable vanilla PHP MVC skeleton that serves JSON over REST
 - PHP 8.3+, Composer 2, Docker + Docker Compose, Git, a GitHub repo, editor with EditorConfig.
 - Stripe account not needed this week. No catalog/cart work this week.
 
+## 3.1 Read before you build (per step)
+
+Full map + links in `docs/learning-resources.md`. Short version:
+
+| Before step | Read |
+|---|---|
+| 5 Front Controller + DI | PSR-7/11/15 specs, PHP-DI docs, Fowler "Front Controller" |
+| 6 Router + Middleware | FastRoute README + its `src/Dispatcher` source, PSR-15 meta doc |
+| 7 Health check | RFC 9110 status codes, 12-factor config |
+| 8 Dockerize | Docker get-started, `hub.docker.com/_/php` FPM notes, Nginx `try_files`/fastcgi docs |
+| 10 Tests + Static analysis | PHPUnit Test Doubles, PHPStan levels, PSR-12 spec |
+| 11 CI | GitHub Actions docs (caching, matrix), "Continuous Delivery" |
+
 ## 4. TODO List
 
 Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
@@ -30,14 +43,17 @@ Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
 - [x] **Step 3 — Environment config module**
   - [x] `.env.example` + `.env` with app/db/redis/log/JWT-placeholder/CORS keys
   - [x] `App\Core\Config` loader: real-env first, Dotenv CLI-only fallback, fail-fast on missing keys, never dumps secrets (verified: phpunit 3 tests, PHPStan L8, PSR-12 clean)
-- [ ] **Step 4 — Logger + Error handler**
-  - [ ] Monolog PSR-3 JSON to stdout (request id, level, context)
-  - [ ] Global handler → RFC 9457 `application/problem+json`; debug trace local-only
-  - [ ] Scratch route test for exception → JSON, then remove
-- [ ] **Step 5 — Front Controller + DI container**
-  - [ ] `public/index.php` bootstrap: autoload → config → container → logger → error handler → dispatch
-  - [ ] PHP-DI registrations: config, logger, PSR-7 request/response factories
-  - [ ] Nginx confirms only `public/` is reachable
+- [x] **Step 4 — Logger + Error handler**
+  - [x] `App\Core\LoggerFactory`: Monolog JSON to stdout, level from `LOG_LEVEL` (invalid → debug), request-id + app_env processor
+  - [x] `App\Core\ErrorHandler` + `ProblemDetails` → RFC 9457 `application/problem+json`; `HttpException` status mapping (400/401/403/404/405/409/422/429)
+  - [x] Debug trace (`debug` ext member) only when `APP_DEBUG=true` and `APP_ENV=local`; prod hides detail; warnings logged+suppressed, fatals via shutdown
+  - [x] Verified: phpunit 10 tests, PHPStan L8, PSR-12 clean, CLI smoke (debug trace present / prod trace absent). Route-based check deferred to Step 6
+- [x] **Step 5 — Front Controller + DI container**
+  - [x] `public/index.php`: autoload → container (`config/container.php`) → `ErrorHandler::register()` → `ServerRequestFactory::fromGlobals()` → `Kernel::handle()` → `ResponseEmitter`
+  - [x] PHP-DI registrations: `Config`, `LoggerInterface`, `ErrorHandler`, PSR-17 `ResponseFactoryInterface`/`StreamFactoryInterface`, `ResponseEmitter`; `Kernel`/`ProblemResponder` autowired
+  - [x] `App\Core\ProblemResponder` (RFC 9457 PSR-7 response), `App\Core\ResponseEmitter`, `App\Http\Kernel` (temporary 404 until Step 6)
+  - [x] Only `public/` reachable (non-public 404, `.env` 403); `expose_php=Off` + nginx `server_tokens off`
+  - [x] Verified: phpunit 14 tests, PHPStan L8, PSR-12 clean, live curl returns `application/problem+json`
 - [ ] **Step 6 — Router + Middleware pipeline**
   - [ ] `routes/api.php` placeholders: welcome, health, version
   - [ ] PSR-15 pipeline: request-id, CORS stub (restrictive), JSON body parser, dispatcher, responder, catcher
@@ -48,7 +64,7 @@ Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
   - [x] `docker/php/Dockerfile` (slim: pdo_pgsql, pgsql, opcache; intl/zip/redis deferred to W4; non-root)
   - [x] `docker/php/{opcache.ini,php.ini}`, `docker/nginx/default.conf`
   - [x] `docker-compose.yml`: app/web/db/cache + healthchecks + volumes
-  - [ ] Build `app` image (first build slow, one-time) and full cold-start verify from host
+  - [x] `app` image built (`headless-ecom-app`, ~99MB) and full stack up; db/cache healthy, ports remapped 8081/5433/6380
 - [x] **Step 9 — Makefile / task shortcuts**
   - [x] `install/start-infra/build/start/stop/restart/logs/test/analyse/cs/shell/db-shell/redis-shell`
 - [ ] **Step 10 — Tests + Static analysis + Style**
@@ -77,3 +93,6 @@ Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
 
 ## 7. How to Ask for Help
 When stuck, share: the step number above, the exact command run, the exact JSON/error output, and the relevant file path and line. Do not paste secrets.
+
+## 8. Learning
+- Component map, primary sources, read-real-code targets, schedule: `docs/learning-resources.md`.
