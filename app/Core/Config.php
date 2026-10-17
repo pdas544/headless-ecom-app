@@ -9,7 +9,7 @@ use RuntimeException;
 
 final class Config
 {
-    private const REQUIRED = ['APP_NAME', 'APP_ENV', 'APP_URL', 'DATABASE_URL', 'REDIS_URL', 'LOG_LEVEL'];
+    private const REQUIRED = ['APP_NAME', 'APP_ENV', 'APP_DEBUG', 'APP_URL', 'DATABASE_URL', 'REDIS_URL', 'LOG_LEVEL'];
 
     /** @var array<string, string> */
     private array $values;
