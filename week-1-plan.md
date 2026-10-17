@@ -6,7 +6,7 @@ End the week with a runnable vanilla PHP MVC skeleton that serves JSON over REST
 ## 2. Done Criteria (must all pass)
 - Composer PSR-4 autoload works; single front controller handles all requests.
 - Router returns JSON for defined routes and JSON 404 for undefined.
-- Central config from environment, central Monolog JSON logger, central RFC7807 error handler (no HTML stack traces, no PHP warnings leaked).
+- Central config from environment, central Monolog JSON logger, central RFC 9457 Problem Details error handler (no HTML stack traces, no PHP warnings leaked).
 - Health endpoint responds with status ok plus checks for app, database, cache placeholders.
 - Docker Compose up brings Nginx + PHP-FPM + Postgres 16 + Redis 7; app reachable on localhost.
 - GitHub Actions runs composer validate, code style check, static analysis, and tests on every push.
@@ -16,69 +16,51 @@ End the week with a runnable vanilla PHP MVC skeleton that serves JSON over REST
 - PHP 8.3+, Composer 2, Docker + Docker Compose, Git, a GitHub repo, editor with EditorConfig.
 - Stripe account not needed this week. No catalog/cart work this week.
 
-## 4. Step-wise Guidelines
+## 4. TODO List
 
-### Step 1 — Initialize repo and Composer
-- Create project metadata with PHP >=8.3 requirement and PSR-4 autoload pointing to the app directory.
-- Add the Week-1 only dependencies: router, PSR-7 implementation, DI container, logger, dotenv, plus dev tools for tests, static analysis, code style. Do not add Eloquent, Stripe, mailer, or S3 yet — keep Week-1 lean.
-- Verify install with no version conflicts and commit lock file.
+Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
 
-### Step 2 — Create folder skeleton
-- Create directories for: public entry point, application core, HTTP layer (controllers, middleware), configuration, routes, database placeholders, tests, docker files, CI workflows, docs.
-- Add gitignore for vendor, environment files, IDE files, logs, coverage output.
-- Add EditorConfig for consistent line endings and indentation.
-
-### Step 3 — Environment config module
-- Create a config loader that reads from environment variables with dotenv fallback for local only.
-- Define keys for app name, environment, debug flag, base URL, database URL, Redis URL, log level, JWT secrets placeholders (empty for now).
-- Ensure missing required keys fail fast with a clear message in local, but never dump secrets in output or logs.
-- Provide a documented example env file.
-
-### Step 4 — Logger + Error handler
-- Set up a single shared PSR-3 logger that writes structured JSON to stdout (Docker-friendly) with request id, level, message, context.
-- Build a global exception and error handler that converts all throwables and PHP errors into RFC7807-style JSON responses with appropriate HTTP status codes.
-- In production mode hide details; in debug mode include trace only locally. Test by triggering a fake exception on a scratch route, then remove it.
-
-### Step 5 — Front Controller + DI container
-- Point all web traffic to a single public index file via Nginx. That file should bootstrap autoload, config, container, logger, error handler, then dispatch.
-- Register core services in the DI container: config, logger, request/response factories. No domain services yet.
-- Verify no direct script access outside the public directory.
-
-### Step 6 — Router + Middleware pipeline
-- Define a routes file for API v1 with only placeholder routes for now: a welcome route, a health route, and a version route.
-- Implement a minimal PSR-15 style middleware pipeline: request id, CORS stub (restrictive allowlist), JSON body parser, router dispatcher, JSON responder, error catcher.
-- Controllers must be thin: accept request, call nothing yet or a stub service, return JSON resource. No DB calls this week.
-- Verify unknown route returns JSON 404, wrong method returns JSON 405, invalid JSON body returns JSON 400.
-
-### Step 7 — Health check contract
-- Implement a health endpoint that returns app status and dependency statuses. Database and Redis checks can return a not-configured state this week — wire real checks in Week-2/3.
-- Keep response shape stable since Railway/Render and uptime monitors will use it.
-
-### Step 8 — Dockerize
-- Create PHP-FPM image definition with required extensions for Postgres, Redis, intl, zip, opcache. Non-root user if possible, production OPcache settings documented.
-- Create Nginx server block that forwards PHP to FPM, blocks access to dotfiles, sets security headers, raises client body size for future uploads.
-- Create Compose file with four services: app (php-fpm), web (nginx), db (postgres 16 with named volume + healthcheck), cache (redis 7 with persistence + healthcheck).
-- Verify full cold start works: remove volumes, bring up, hit welcome and health endpoints from host.
-
-### Step 9 — Makefile / task shortcuts
-- Provide short documented tasks for: install, start, stop, logs, test, analyze, style check, format, shell into app container, db shell. Keep names stable for CI reuse.
-
-### Step 10 — Tests + Static analysis + Style
-- Set up PHPUnit with unit suite and integration suite placeholders (one passing smoke test each, e.g. health response shape).
-- Set up PHPStan at max level and code style checker for PSR-12. Fix all baseline issues now — do not carry tech debt into Week-2.
-- Aim for green on empty coverage; coverage threshold enforcement starts Week-2.
-
-### Step 11 — CI pipeline
-- Add a workflow that on push and pull request runs: dependency validation, style check, static analysis, unit tests. Cache Composer dependencies.
-- Require the workflow to pass before merge. Add status badge to README.
-
-### Step 12 — README + RUNBOOK stub
-- Document prerequisites, env setup, Docker start, how to run tests and checks, project structure explanation, API versioning rule, commit convention.
-- Add a short troubleshooting section for common Docker port conflicts, permission issues, and missing extensions.
-
-### Step 13 — Final verification
-- Run the full sequence from scratch: fresh clone, copy example env, install, start containers, run checks and tests, hit welcome/health/404 routes, stop and restart to confirm persistence.
-- Tag the commit as the Week-1 milestone and note any deviations for Week-2.
+- [x] **Step 1 — Initialize repo and Composer**
+  - [x] Project metadata, PHP >=8.3, PSR-4 `App\ → app/` (`composer.json`)
+  - [x] Week-1 deps only: fast-route, diactoros, php-di, monolog, dotenv (no Eloquent/Stripe/mailer/S3)
+  - [x] Install clean, `composer.lock` committed
+- [x] **Step 2 — Folder skeleton**
+  - [x] `public/ app/{Core,Http/{Controllers,Middleware},config,routes/database,tests,docker,.github/workflows,docs}`
+  - [x] `.gitignore`, `.dockerignore`, `.editorconfig`
+- [x] **Step 3 — Environment config module**
+  - [x] `.env.example` + `.env` with app/db/redis/log/JWT-placeholder/CORS keys
+  - [x] `App\Core\Config` loader: real-env first, Dotenv CLI-only fallback, fail-fast on missing keys, never dumps secrets (verified: phpunit 3 tests, PHPStan L8, PSR-12 clean)
+- [ ] **Step 4 — Logger + Error handler**
+  - [ ] Monolog PSR-3 JSON to stdout (request id, level, context)
+  - [ ] Global handler → RFC 9457 `application/problem+json`; debug trace local-only
+  - [ ] Scratch route test for exception → JSON, then remove
+- [ ] **Step 5 — Front Controller + DI container**
+  - [ ] `public/index.php` bootstrap: autoload → config → container → logger → error handler → dispatch
+  - [ ] PHP-DI registrations: config, logger, PSR-7 request/response factories
+  - [ ] Nginx confirms only `public/` is reachable
+- [ ] **Step 6 — Router + Middleware pipeline**
+  - [ ] `routes/api.php` placeholders: welcome, health, version
+  - [ ] PSR-15 pipeline: request-id, CORS stub (restrictive), JSON body parser, dispatcher, responder, catcher
+  - [ ] Verify: unknown route 404 JSON, wrong method 405 JSON, bad JSON body 400 JSON
+- [ ] **Step 7 — Health check contract**
+  - [ ] `GET /health`: app status + db/cache (not-configured OK this week), stable shape
+- [~] **Step 8 — Dockerize**
+  - [x] `docker/php/Dockerfile` (slim: pdo_pgsql, pgsql, opcache; intl/zip/redis deferred to W4; non-root)
+  - [x] `docker/php/{opcache.ini,php.ini}`, `docker/nginx/default.conf`
+  - [x] `docker-compose.yml`: app/web/db/cache + healthchecks + volumes
+  - [ ] Build `app` image (first build slow, one-time) and full cold-start verify from host
+- [x] **Step 9 — Makefile / task shortcuts**
+  - [x] `install/start-infra/build/start/stop/restart/logs/test/analyse/cs/shell/db-shell/redis-shell`
+- [ ] **Step 10 — Tests + Static analysis + Style**
+  - [ ] `phpunit.xml` with Unit + Integration suites (1 smoke test passing each)
+  - [ ] PHPStan level 8 + PSR-12 phpcs green with zero baseline debt
+- [ ] **Step 11 — CI pipeline**
+  - [ ] GitHub Actions: validate + cs + analyse + unit tests on push/PR, Composer cache, badge
+- [ ] **Step 12 — README + RUNBOOK stub**
+  - [ ] Prereqs, env setup, Docker start, test/analyse commands, structure, versioning rule, troubleshooting
+- [ ] **Step 13 — Final verification**
+  - [ ] Fresh-clone full sequence passes; welcome/health/404 hit from host; restart persistence confirmed
+  - [ ] Tag Week-1 milestone commit; note deviations
 
 ## 5. What NOT To Do in Week-1
 - No users, products, carts, orders, Stripe, mailer, uploads, or ORM wiring.

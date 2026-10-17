@@ -64,7 +64,7 @@ Indexes: products(slug,status), variants(sku), orders(user_id,status,created_at)
 
 ## 5. Week-wise Plan (8 weeks)
 
-W1 Foundation: Composer PSR-4 skeleton, Front Controller, Router+DI+Config+Logger, RFC7807 JSON errors, GET /health, Docker Compose (php-fpm+nginx+postgres16+redis7), Makefile, GitHub Actions (validate, phpcs, phpstan, phpunit).
+W1 Foundation: Composer PSR-4 skeleton, Front Controller, Router+DI+Config+Logger, RFC 9457 JSON errors, GET /health, Docker Compose (php-fpm+nginx+postgres16+redis7), Makefile, GitHub Actions (validate, phpcs, phpstan, phpunit).
 W2 Auth/Users/RBAC: register/login/refresh/logout, forgot/reset, verify email, JWT middleware, admin/customer gate, login rate-limit, audit log.
 W3 Catalog + Inventory: categories/products/variants/media CRUD (admin) + public list/detail with pagination/filter/sort/search, Redis cache + ETag.
 W4 Cart/Wishlist/Promotions: guest cart UUID merge on login, wishlist, coupon validate + calculator service (tax/shipping/discount server-side).
@@ -82,7 +82,7 @@ POST /checkout | GET /orders, /orders/{id} | POST /webhooks/stripe | Admin: /adm
 ## 7. Production Best Practices
 1. Thin controllers / fat services / repositories for SQL.
 2. strict_types, PSR-12, prepared statements only.
-3. Validate every input DTO; return RFC7807 problem JSON.
+3. Validate every input DTO; return RFC 9457 problem JSON (`application/problem+json`).
 4. Recalc totals server-side; lock inventory with SELECT FOR UPDATE.
 5. Idempotency-Key on checkout; unique constraint in DB.
 6. Verify Stripe signature; retry webhooks via outbox/queue.
