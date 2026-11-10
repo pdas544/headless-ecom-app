@@ -54,12 +54,13 @@ Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
   - [x] `App\Core\ProblemResponder` (RFC 9457 PSR-7 response), `App\Core\ResponseEmitter`, `App\Http\Kernel` (temporary 404 until Step 6)
   - [x] Only `public/` reachable (non-public 404, `.env` 403); `expose_php=Off` + nginx `server_tokens off`
   - [x] Verified: phpunit 14 tests, PHPStan L8, PSR-12 clean, live curl returns `application/problem+json`
-- [ ] **Step 6 — Router + Middleware pipeline**
-  - [ ] `routes/api.php` placeholders: welcome, health, version
-  - [ ] PSR-15 pipeline: request-id, CORS stub (restrictive), JSON body parser, dispatcher, responder, catcher
-  - [ ] Verify: unknown route 404 JSON, wrong method 405 JSON, bad JSON body 400 JSON
-- [ ] **Step 7 — Health check contract**
-  - [ ] `GET /health`: app status + db/cache (not-configured OK this week), stable shape
+- [x] **Step 6 — Router + Middleware pipeline**
+  - [x] `routes/api.php`: welcome (`GET /`), health (`GET /health`), version (`GET /api/v1`)
+  - [x] `App\Core\Router` (FastRoute) + `RouteMatch`/`RouteMatchType`; thin controllers as PSR-15 `RequestHandlerInterface`
+  - [x] Pipeline (`App\Http\MiddlewarePipeline` in `Kernel`): CatchThrowable → RequestId (`X-Request-Id`, logs get `request_id`) → CORS stub (allowlist, preflight 204, no wildcard) → JSON body parser → Router
+  - [x] Verified live: unknown route 404 JSON, wrong method 405 JSON ("Allowed methods: GET"), bad JSON body 400 JSON, disallowed origin gets no ACAO headers
+- [x] **Step 7 — Health check contract**
+  - [x] `GET /health`: `{status, version, checks{app: ok, database: not-configured, cache: not-configured}}` — stable shape; real DB/Redis checks wire in Week-2/3
 - [~] **Step 8 — Dockerize**
   - [x] `docker/php/Dockerfile` (slim: pdo_pgsql, pgsql, opcache; intl/zip/redis deferred to W4; non-root)
   - [x] `docker/php/{opcache.ini,php.ini}`, `docker/nginx/default.conf`
@@ -67,16 +68,19 @@ Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
   - [x] `app` image built (`headless-ecom-app`, ~99MB) and full stack up; db/cache healthy, ports remapped 8081/5433/6380
 - [x] **Step 9 — Makefile / task shortcuts**
   - [x] `install/start-infra/build/start/stop/restart/logs/test/analyse/cs/shell/db-shell/redis-shell`
-- [ ] **Step 10 — Tests + Static analysis + Style**
-  - [ ] `phpunit.xml` with Unit + Integration suites (1 smoke test passing each)
-  - [ ] PHPStan level 8 + PSR-12 phpcs green with zero baseline debt
-- [ ] **Step 11 — CI pipeline**
+- [~] **Step 10 — Tests + Static analysis + Style**
+  - [x] `phpunit.xml` with Unit + Integration suites; 32 tests / 81 assertions green; `#[DataProvider]` attribute (PHPUnit-12-ready)
+  - [x] PHPStan level 8 + PSR-12 phpcs green with zero baseline debt
+- [ ] **Step 11 — CI pipeline** *(optional; deferred to end of entire project per owner decision)*
   - [ ] GitHub Actions: validate + cs + analyse + unit tests on push/PR, Composer cache, badge
-- [ ] **Step 12 — README + RUNBOOK stub**
-  - [ ] Prereqs, env setup, Docker start, test/analyse commands, structure, versioning rule, troubleshooting
-- [ ] **Step 13 — Final verification**
-  - [ ] Fresh-clone full sequence passes; welcome/health/404 hit from host; restart persistence confirmed
-  - [ ] Tag Week-1 milestone commit; note deviations
+- [x] **Step 12 — README + RUNBOOK stub**
+  - [x] `README.md`: architecture, stack, quickstart, ports, endpoints, env, quality gates, structure, conventions, troubleshooting, deploy target
+  - [x] `docs/RUNBOOK.md`: run/stop/health/logs/shells/rebuild + W8 stubs (deploy, backups) + Week-1 known limitations
+- [~] **Step 13 — Final verification** *(commit + tag pending user approval)*
+  - [x] Cold start: `down` → `start` → welcome 200, health 200 (stable shape), 404/405/400 problem+json
+  - [x] Restart persistence: volumes `headless-ecom_{pgdata,redisdata}` survive; health 200 after restart
+  - [x] Full gate green: `composer validate`, both phpunit suites, PHPStan L8, PSR-12
+  - [ ] Tag Week-1 milestone commit (requires user commit)
 
 ## 5. What NOT To Do in Week-1
 - No users, products, carts, orders, Stripe, mailer, uploads, or ORM wiring.
