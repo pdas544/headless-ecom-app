@@ -20,6 +20,11 @@ final class KernelTest extends TestCase
         'DATABASE_URL' => 'pgsql://ecom:ecom@db:5432/ecom',
         'REDIS_URL' => 'redis://cache:6379',
         'LOG_LEVEL' => 'debug',
+        'JWT_SECRET' => 'test-secret-test-secret-test-secret-1234567890',
+        'JWT_TTL' => '900',
+        'REFRESH_TTL_DAYS' => '30',
+        'MAIL_DSN' => 'smtp://mailpit:1025',
+        'MAIL_FROM' => 'no-reply@example.test',
         'APP_VERSION' => '0.1.0',
         'CORS_ALLOWED_ORIGINS' => 'http://localhost:3000',
     ];
