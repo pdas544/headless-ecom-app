@@ -9,7 +9,7 @@
 
 ## Health & smoke
 
-- App health: `curl http://localhost:8081/health` — expect `{"status":"ok",...}`; monitor shape is contract-stable.
+- App health: `curl http://localhost:8081/health` — `200` with all checks `ok`, or `503` when `database`/`cache` show `fail` (the app keeps serving other routes; probes are bounded to ~2 s).
 - 404 contract: `curl -i http://localhost:8081/nope` — expect `application/problem+json`.
 - Auth (Week-2+): register/login flows here.
 
@@ -39,6 +39,6 @@
 
 ## Known limitations (Week-1)
 
-- `/health` DB/cache checks are `not-configured` placeholders.
+- intl/zip extensions not in image (needed from Week-4); Redis uses pure-PHP Predis, so no phpredis extension required.
 - No CI pipeline yet (Step 11 deferred), no coverage threshold (Week-2).
 - intl/zip/phpredis extensions not in image (needed from Week-4); add to Dockerfile then.

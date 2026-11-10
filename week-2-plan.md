@@ -70,12 +70,14 @@ Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
   - [x] `config/auth.php`: issuer/audience, TTL bounds (60-3600s; 1-365d), secret >=32 chars fail-fast, refresh cookie flags (Secure off-local, HttpOnly, SameSite=Lax, path `/api/v1/auth`), Argon2id policy (64 MiB, time 4, threads 1)
   - [x] `config/database.php`: parses `DATABASE_URL` (pgsql/postgres schemes, port default, url-decoded credentials, `sslmode`, UTC, ERRMODE_EXCEPTION, EMULATE_PREPARES off)
   - [x] Verified: 40 tests / 113 assertions, PHPStan L8, PSR-12, `composer validate`; container (PHP 8.3.35) loads all new libs + Phinx 0.16.12; `/health` still 200 after env reload
-- [ ] **Step 2 — DB foundation**
-  - [ ] `App\Core\Uuid`: RFC 9562 UUIDv7 generator (+ unit tests: version/variant, monotonic within same ms)
-  - [ ] `App\Core\Database`: PDO factory (ERRMODE_EXCEPTION, prepared-only, UTC session), Eloquent Capsule bootstrap (UTC, no lazy magic docs)
-  - [ ] Redis client service (Predis) with DSN from env + short connect/read timeouts
-  - [ ] `/health` wired to `SELECT 1` + `PING`; 200 `ok` / 503 `degraded` with per-check `ok|fail`; keep stable shape
-  - [ ] Verified: `/health` 200 with db/cache up; stop cache → 503 degraded, app stays up
+- [x] **Step 2 — DB foundation**
+  - [x] `App\Core\Uuid`: RFC 9562 UUIDv7 (48-bit ms | v7 | 12-bit monotonic sequence | variant | 62 random bits) + `isValid`; unit tests cover version/variant, embedded timestamp, same-ms monotonicity over 5000 calls, uniqueness
+  - [x] `App\Core\Database`: `dsn()` (sslmode + connect_timeout=2), `pdo()` (ERRMODE_EXCEPTION, EMULATE_PREPARES off, ATTR_TIMEOUT, `SET TIME ZONE 'UTC'`), `bootEloquent()` (standalone Capsule, global, UTC) with key re-validation
+  - [x] `App\Core\RedisClient`: explicit redis://rediss:// DSN parsing (scheme tls/tcp, host/port, db path, ACL user/pass), 1.0 s connect + 1.5 s read/write timeouts
+  - [x] `App\Core\HealthChecker`: lazy probe closures so construction never needs live deps; per-check `ok|fail`, warns in JSON logs, `ok`/`degraded`
+  - [x] Container wiring: `PDO`, `Capsule`, `Predis\ClientInterface`, `HealthChecker`; `HealthController` returns `200 ok` / `503 degraded` keeping `{status, version, checks}` shape
+  - [x] Verified live: all-up → 200 all `ok`; stop cache → 503 (`cache: fail`), stop db → 503 (`database: fail`), welcome route still 200; restore → 200 all `ok`
+  - [x] Tests: 54 tests green in container, 54 on host (1 infra-dependent test skips outside Docker); PHPStan L8 + PSR-12 clean
 - [ ] **Step 3 — Migrations + seeds**
   - [ ] `database/migrations` (Phinx, Postgres): `users`, `refresh_tokens`, `password_resets`, `email_verifications`, `audit_logs`
   - [ ] Constraints/indexes: `users.email` unique (lowercased on write), `role CHECK (admin,customer,seller_reserved)`, `refresh_tokens.token_hash` unique, family index, `audit_logs(actor_user_id, created_at)`; all `timestamptz`

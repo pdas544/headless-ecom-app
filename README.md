@@ -66,7 +66,7 @@ Inside the compose network use `db:5432` / `cache:6379` as configured in `.env`.
 | Route | Response |
 |---|---|
 | `GET /` | API welcome/entry point |
-| `GET /health` | Status + `{app, database, cache}` checks (DB/Redis checks land Week-2/3) |
+| `GET /health` | Live status: `200 ok` / `503 degraded` with `{app, database, cache}` checks (`ok`/`fail`; bounded DB + Redis probes) |
 | `GET /api/v1` | Version declaration |
 
 - Unknown route → `404` problem+json; wrong method → `405` (lists allowed); invalid JSON body → `400`.
@@ -122,6 +122,7 @@ docs/                     runbook + learning resources
 | First `make build` slow | LLVM/GCC toolchain compiles `pdo_pgsql` once; cached afterwards |
 | Changed `docker/nginx/default.conf` not applied | Run `make reload` (Nginx reads the mount only at reload) |
 | Containers stuck not healthy | `docker compose ps` — wait; image has `pg_isready`/`redis-cli ping` checks |
+| `/health` returns 503 | Body shows which check is `fail` (`database`/`cache`); start the dependency and retry |
 | 500 with trace in responses | Local-only by contract: `APP_DEBUG=true` + `APP_ENV=local`. In prod keep both off |
 
 ## Deploy (target)

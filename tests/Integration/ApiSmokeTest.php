@@ -58,7 +58,6 @@ final class ApiSmokeTest extends TestCase
     public static function scenarioProvider(): iterable
     {
         yield 'welcome' => ['GET', '/', 200, 'application/json', '', ''];
-        yield 'health' => ['GET', '/health', 200, 'application/json', '', ''];
         yield 'version' => ['GET', '/api/v1', 200, 'application/json', '', ''];
         yield 'unknown route' => ['GET', '/products', 404, 'application/problem+json', '', ''];
         yield 'wrong method' => ['POST', '/health', 405, 'application/problem+json', '', ''];
@@ -105,15 +104,67 @@ final class ApiSmokeTest extends TestCase
         /** @var array<string, mixed> $body */
         $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
 
+        self::assertContains($response->getStatusCode(), [200, 503]);
+        self::assertSame($body['status'] === 'ok' ? 200 : 503, $response->getStatusCode());
+        self::assertSame('0.1.0', $body['version']);
+
+        /** @var array<string, string> $checks */
+        $checks = $body['checks'];
+        self::assertSame(['app', 'database', 'cache'], array_keys($checks));
+        self::assertSame('ok', $checks['app']);
+        self::assertContains($checks['database'], ['ok', 'fail']);
+        self::assertContains($checks['cache'], ['ok', 'fail']);
+    }
+
+    public function testHealthReportsOkWhenDependenciesAreReachable(): void
+    {
+        if (!$this->infraReachable()) {
+            self::markTestSkipped('Postgres/Redis not reachable from this runtime; run inside the app container.');
+        }
+
+        $response = $this->kernel()->handle(
+            new ServerRequest([], [], $this->uri('/health'), 'GET'),
+        );
+
+        /** @var array<string, mixed> $body */
+        $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(200, $response->getStatusCode());
         self::assertSame([
             'status' => 'ok',
             'version' => '0.1.0',
-            'checks' => [
-                'app' => 'ok',
-                'database' => 'not-configured',
-                'cache' => 'not-configured',
-            ],
+            'checks' => ['app' => 'ok', 'database' => 'ok', 'cache' => 'ok'],
         ], $body);
+    }
+
+    private function infraReachable(): bool
+    {
+        foreach (['DATABASE_URL', 'REDIS_URL'] as $key) {
+            $url = getenv($key);
+
+            if (!is_string($url)) {
+                return false;
+            }
+
+            $parts = parse_url($url);
+
+            if ($parts === false || !isset($parts['host'], $parts['port'])) {
+                return false;
+            }
+
+            $socket = @fsockopen($parts['host'], (int) $parts['port'], $errorCode, $errorMessage, 0.3);
+            $reachable = is_resource($socket);
+
+            if ($reachable) {
+                fclose($socket);
+            }
+
+            if (!$reachable) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function kernel(): Kernel
