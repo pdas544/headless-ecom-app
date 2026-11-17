@@ -42,9 +42,10 @@
     "scripts": {
         "test": "phpunit --testsuite=Unit",
         "test-all": "phpunit",
-        "analyse": "phpstan analyse app config routes public --level=8",
-        "cs": "phpcs --standard=PSR12 app config routes public tests",
-        "cs-fix": "phpcbf --standard=PSR12 app config routes public tests"
+        "analyse": "phpstan analyse app config routes public database phinx.php --level=8",
+        "cs": "phpcs app config routes public tests database phinx.php",
+        "cs-fix": "phpcbf app config routes public tests database phinx.php",
+        "test-integration": "phpunit -c phpunit.integration.xml"
     },
     "config": {
         "optimize-autoloader": true,

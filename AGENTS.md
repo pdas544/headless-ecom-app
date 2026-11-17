@@ -9,8 +9,8 @@
 - `make start-infra` — db+cache only (fast) | `make build` — app image (slow first time, 5-8 min) | `make start` — all without build. Never chain `install && start --build`.
 - `composer validate --no-check-publish`
 - `vendor/bin/phpunit --testsuite=Unit` on host, or `docker compose exec -T app vendor/bin/phpunit --testsuite=Unit` in container.
-- `vendor/bin/phpstan analyse app config routes public --level=8`
-- `vendor/bin/phpcs --standard=PSR12 app config routes public tests`
+- `vendor/bin/phpstan analyse app config routes public database phinx.php --level=8`
+- `vendor/bin/phpcs`
 - `make db-shell` / `make redis-shell` — exec inside containers, not host `psql`/`redis-cli`.
 
 ## Env / ports gotchas

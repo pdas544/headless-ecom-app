@@ -82,9 +82,10 @@ Copy `.env.example` → `.env`. Required keys (missing → fail-fast at boot, ne
 ```bash
 vendor/bin/phpunit                    # both suites
 vendor/bin/phpunit --testsuite=Unit   # unit only
-vendor/bin/phpstan analyse app config routes public --level=8
-vendor/bin/phpcs --standard=PSR12 app config routes public tests
-vendor/bin/phpcbf --standard=PSR12 app config routes public tests   # auto-fix
+make test-integration                 # ecom_test + Integration suite in container
+vendor/bin/phpstan analyse app config routes public database phinx.php --level=8
+vendor/bin/phpcs
+vendor/bin/phpcbf   # auto-fix
 ```
 
 Or via Composer scripts: `composer test`, `composer analyse`, `composer cs`.

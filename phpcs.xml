@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<ruleset name="headless-ecom">
+    <description>PSR-12 with documented project exceptions.</description>
+
+    <file>app</file>
+    <file>config</file>
+    <file>routes</file>
+    <file>public</file>
+    <file>tests</file>
+    <file>database</file>
+    <file>phinx.php</file>
+
+    <arg name="extensions" value="php"/>
+    <arg value="ps"/>
+
+    <rule ref="PSR12"/>
+
+    <!-- Phinx discovers migrations/seeds by global class name matching the file name. -->
+    <rule ref="PSR1.Classes.ClassDeclaration.MissingNamespace">
+        <exclude-pattern>database/migrations/*</exclude-pattern>
+        <exclude-pattern>database/seeds/*</exclude-pattern>
+    </rule>
+</ruleset>

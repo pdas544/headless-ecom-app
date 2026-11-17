@@ -4,54 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Integration;
 
-use App\Http\Kernel;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\StreamFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
-use Psr\Container\ContainerInterface;
 
 /**
  * Boots the real DI container and runs the full middleware pipeline
  * (no HTTP layer) to verify the API contract end to end.
  */
-final class ApiSmokeTest extends TestCase
+final class ApiSmokeTest extends IntegrationTestCase
 {
-    private const REQUIRED_ENV = [
-        'APP_NAME' => 'headless-ecom',
-        'APP_ENV' => 'local',
-        'APP_DEBUG' => 'false',
-        'APP_URL' => 'http://localhost:8081',
-        'APP_VERSION' => '0.1.0',
-        'DATABASE_URL' => 'pgsql://ecom:ecom@db:5432/ecom',
-        'REDIS_URL' => 'redis://cache:6379',
-        'LOG_LEVEL' => 'debug',
-        'JWT_SECRET' => 'test-secret-test-secret-test-secret-1234567890',
-        'JWT_TTL' => '900',
-        'REFRESH_TTL_DAYS' => '30',
-        'MAIL_DSN' => 'smtp://mailpit:1025',
-        'MAIL_FROM' => 'no-reply@example.test',
-        'CORS_ALLOWED_ORIGINS' => 'http://localhost:3000',
-    ];
-
-    private ContainerInterface $container;
-
-    protected function setUp(): void
-    {
-        foreach (self::REQUIRED_ENV as $key => $value) {
-            putenv("{$key}={$value}");
-        }
-
-        $this->container = require dirname(__DIR__, 2) . '/config/container.php';
-    }
-
-    protected function tearDown(): void
-    {
-        foreach (array_keys(self::REQUIRED_ENV) as $key) {
-            putenv($key);
-        }
-    }
-
     /**
      * @return iterable<string, array{0: string, 1: string, 2: int, 3: string, 4: string, 5: string}>
      */
@@ -165,18 +127,5 @@ final class ApiSmokeTest extends TestCase
         }
 
         return true;
-    }
-
-    private function kernel(): Kernel
-    {
-        $kernel = $this->container->get(Kernel::class);
-        assert($kernel instanceof Kernel);
-
-        return $kernel;
-    }
-
-    private function uri(string $path): string
-    {
-        return 'https://api.test' . $path;
     }
 }

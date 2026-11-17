@@ -78,22 +78,28 @@ Status legend: `[x]` done | `[~]` partial (echoes what remains) | `[ ]` pending
   - [x] Container wiring: `PDO`, `Capsule`, `Predis\ClientInterface`, `HealthChecker`; `HealthController` returns `200 ok` / `503 degraded` keeping `{status, version, checks}` shape
   - [x] Verified live: all-up → 200 all `ok`; stop cache → 503 (`cache: fail`), stop db → 503 (`database: fail`), welcome route still 200; restore → 200 all `ok`
   - [x] Tests: 54 tests green in container, 54 on host (1 infra-dependent test skips outside Docker); PHPStan L8 + PSR-12 clean
-- [ ] **Step 3 — Migrations + seeds**
-  - [ ] `database/migrations` (Phinx, Postgres): `users`, `refresh_tokens`, `password_resets`, `email_verifications`, `audit_logs`
-  - [ ] Constraints/indexes: `users.email` unique (lowercased on write), `role CHECK (admin,customer,seller_reserved)`, `refresh_tokens.token_hash` unique, family index, `audit_logs(actor_user_id, created_at)`; all `timestamptz`
-  - [ ] `refresh_tokens.family_id`, `revoked_at`, `replaced_by_id`, `expires_at`, `user_agent`, `ip`; `users.password_changed_at`
-  - [ ] Phinx config reads env via `$_SERVER/$_ENV/getenv()` (no Dotenv hard dependency); `make migrate`, `make migrate-test`, `make seed`
-  - [ ] Dev admin seed from `ADMIN_EMAIL`/`ADMIN_PASSWORD` (idempotent, dev/test only)
-  - [ ] Verified: migrate from empty DB, rollback, re-migrate; `\d+ users` reviewed
-- [ ] **Step 4 — Test DB harness**
-  - [ ] `ecom_test` DB create/reset target; migrations applied before Integration suite (Makefile `test-integration`)
-  - [ ] Integration bootstrap: test env (JWT secret fixture, test DB URL), per-test transaction rollback (or truncate helper for auth flows that need cross-request visibility)
-  - [ ] `phpunit.xml`: Integration suite env overrides only (unit tests stay env-isolated)
-  - [ ] Faker factories for User/RefreshToken (tests only, `Tests\Support`)
-- [ ] **Step 5 — Models + repositories**
-  - [ ] Eloquent models: `User` (uuid PK, hidden `password_hash`, casts), `RefreshToken`, `PasswordReset`, `EmailVerification`, `AuditLog`
-  - [ ] Repositories (SQL/Eloquent calls live here only): `UserRepository`, `RefreshTokenRepository`, `PasswordResetRepository`, `EmailVerificationRepository`, `AuditLogRepository`
-  - [ ] Model unit/integration tests: casts, hidden fields, relation refresh-tokens
+- [x] **Step 3 — Migrations + seeds**
+  - [x] `database/migrations` (Phinx, Postgres): `users`, `refresh_tokens`, `password_resets`, `email_verifications`, `audit_logs`; all timestamps `timestamptz`, UUID PKs supplied by app (UUIDv7), `down()` drops tables cleanly
+  - [x] Constraints/indexes: `users_email_lower_unique ON users (lower(email))` (case-insensitive; seed upsert uses the same expression), `role CHECK (admin,customer,seller_reserved)`, `refresh_tokens.token_hash` unique, `(user_id)`, `(family_id)`, `(expires_at)` indexes, `audit_logs(actor_user_id, created_at)` + `(action, created_at)`
+  - [x] `refresh_tokens.family_id`, `revoked_at`, `replaced_by_id` (self-FK), `expires_at`, `user_agent`, `ip inet`; `users.password_changed_at`; verification/reset tokens single-use via `used_at` + unique `token_hash`
+  - [x] `phinx.php` reads env via `$_SERVER/$_ENV/getenv()` with manual `.env` fallback (no Dotenv dependency); `development` + `test` envs (`DATABASE_TEST_URL` or derived `<name>_test`); Makefile `migrate`, `migrate-rollback`, `migrate-test` (creates `ecom_test` idempotently), `seed`
+  - [x] `database/seeds/AdminUserSeeder.php`: idempotent upsert (`ON CONFLICT ((lower(email)))`), Argon2id options from `config/auth.php`, requires `ADMIN_EMAIL` + `ADMIN_PASSWORD` (>=12 chars), refuses `APP_ENV=production`; Phinx needs global class names, so `phpcs.xml` excludes only `PSR1.Classes.ClassDeclaration.MissingNamespace` under `database/{migrations,seeds}`
+  - [x] Verified: migrate from empty DB, full rollback (`-t 0`), re-migrate, seed twice leaves exactly one admin row (`$argon2id$`, verified); duplicate email (case-insensitive) and invalid role rejected; refresh-token cascade delete and audit `actor_user_id` SET NULL confirmed in rolled-back transactions; `make migrate-test` creates `ecom_test` and applies all migrations
+  - [x] Re-audit: symfony/* patched to 7.4.22/7.4.23 (→ `composer audit` clean again); `phpunit.xml` cache moved to `/tmp/phpunit-cache` so container `www-data` never writes into the bind mount
+  - [x] Gates: 47 unit tests / 5119 assertions on host and container, Integration 7/7 in container (1 host skip), PHPStan L8 + PHPCS clean, `composer validate` valid
+- [x] **Step 4 — Test DB harness**
+  - [x] `make migrate-test` creates `ecom_test` idempotently and applies all migrations; `make test-integration` migrates then runs the Integration suite; `make db-test-reset` drops/recreates `ecom_test` from scratch
+  - [x] `Tests\Support\IntegrationEnvironment` forces the test env (APP_ENV=test, fixture JWT secret, bounded TTLs, mail/CORS fixtures) and derives `DATABASE_URL` from `DATABASE_TEST_URL` or `<dev-db>_test`; refuses any URL whose database name does not end in `_test`
+  - [x] `IntegrationTestCase` boots the real container; `DatabaseTestCase` connects via the app's Capsule, re-checks the `_test` suffix, skips when Postgres/migrations are unavailable, and wraps each test in a transaction rolled back in `tearDown` (cross-request visibility preserved)
+  - [x] `phpunit.integration.xml` + `tests/Integration/bootstrap.php`: integration-only bootstrap/env; unit suite untouched. Plain `phpunit` still runs both suites (integration self-configures, DB tests skip on host)
+  - [x] Faker factories in `Tests\Support\Factories`: `UserFactory` (UUIDv7, lowercased email, Argon2id), `RefreshTokenFactory` (32-byte token, SHA-256 at rest, family id, expiry, UA/IP); `ApiSmokeTest` now reuses the shared base instead of duplicating env setup
+  - [x] `DatabaseHarnessTest`: core tables present, previous-test writes rolled back, factories insert + join, token FK cascade on user delete
+  - [x] Verified: `make db-test-reset` → `make test-integration` green in container (10 tests, 39 assertions); host Integration 6 pass + 4 skip; both-suite run 57 tests green in container / 57 on host (4 skips); PHPStan L8 + PHPCS + `composer validate` + `composer audit` clean
+- [x] **Step 5 — Models + repositories**
+  - [x] Eloquent models (`app/Models`): `User` (UUID string PK, hidden `password_hash`, datetime casts, `refreshTokens` hasMany), `RefreshToken` (belongsTo user + replacedBy self, hidden hash, datetime casts, no auto timestamps), `PasswordReset`/`EmailVerification` (hidden hash, `used_at` casts), `AuditLog` (jsonb `metadata` => array, actor belongsTo); property docblocks added so PHPStan L8 understands Eloquent attributes
+  - [x] Repositories (`app/Repositories`, Eloquent access only here): `UserRepository` (case-insensitive find/exists, normalized create, password + verification updates), `RefreshTokenRepository` (create/find/revoke/markReplaced/revokeFamily/revokeAllForUser), `PasswordResetRepository` + `EmailVerificationRepository` (single-use consume, invalidate-for-user, expiry-aware lookup), `AuditLogRepository` (typed metadata)
+  - [x] Integration tests: hidden fields (`password_hash`, `token_hash`), datetime casts, model relation, case-insensitive email write/lookup, password/verification updates, family revocation + replacement chain, reset/verify single-use + expiry, audit metadata round-trip and actor relation
+  - [x] Verified: integration suite 18 tests / 82 assertions in container; full run 65 tests / 5201 assertions (host 65 with 12 skips); PHPStan L8 + PHPCS clean (72 files)
 - [ ] **Step 6 — Validation layer**
   - [ ] `App\Core\Validation\ValidatorFactory` (attribute mapping, no annotations, no auto-mapping errors)
   - [ ] Request DTOs (`app/Http/Requests`): `RegisterRequest` (email, password min 12/max 128, optional name ≤100), `LoginRequest`, `ForgotPasswordRequest`, `ResetPasswordRequest` (token + password), `VerifyEmailRequest`, `AdminUserListRequest` (page/per_page bounds)
